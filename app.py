@@ -10,7 +10,7 @@ from services.time_tracking import build_weeks_view
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["PAGE_TITLE"] = os.getenv("SECRET_KEY", "Time tracking")
+    app.config["PAGE_TITLE"] = os.getenv("PAGE_TITLE", "Time tracking")
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-me")
     app.config["TIMEZONE"] = os.getenv("TZ", "Europe/Madrid")
     app.config["CSV_PATH"] = os.getenv("CSV_PATH", "data/sessions.csv")
