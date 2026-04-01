@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Registro de horas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="phone-shell">
+      <header>
+        <p class="eyebrow">Control horario</p>
+        <h1>Registro laboral</h1>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <section class="messages">
+            {% for category, message in messages %}
+              <article class="message {{ category }}">{{ message }}</article>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+
+      {% if has_open_session %}
+        <p class="status open">Sesion abierta desde {{ open_since }}</p>
+      {% else %}
+        <p class="status closed">No hay sesion en curso</p>
+      {% endif %}
+
+      <section class="actions" aria-label="Acciones de fichaje">
+        <form action="{{ url_for('enter') }}" method="post">
+          <button type="submit" class="btn enter" {% if has_open_session %}disabled{% endif %}>Enter</button>
+        </form>
+        <form action="{{ url_for('leave') }}" method="post">
+          <button type="submit" class="btn leave" {% if not has_open_session %}disabled{% endif %}>Leave</button>
+        </form>
+      </section>
+
+      <section class="weeks" aria-label="Semanas registradas">
+        {% if weeks %}
+          {% for week in weeks %}
+            <article class="week-card">
+              <div class="week-head">
+                <h2>{{ week["week_title"] }}</h2>
+                <p class="total">Total {{ week["total"] }}</p>
+              </div>
+              <ul>
+                {% for item in week["items"] %}
+                  <li>
+                    <p>{{ item["day_label"] }}</p>
+                    <p>{{ item["start"] }} - {{ item["end"] }} ({{ item["duration"] }}){% if item["is_open"] %}*{% endif %}</p>
+                  </li>
+                {% endfor %}
+              </ul>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="empty">Aun no hay registros. Pulsa Enter para iniciar tu primera sesion.</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

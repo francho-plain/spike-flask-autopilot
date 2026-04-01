@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=${TZ:-Europe/Madrid}
+      - CSV_PATH=${CSV_PATH:-/data/sessions.csv}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
