@@ -1,12 +1,17 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 :root {
-  --bg: #f6f0e6;
-  --card: #fffaf3;
-  --ink: #2c2217;
-  --muted: #7a6753;
-  --ok: #1f7a4c;
-  --warn: #b3471f;
-  --enter: #136f63;
-  --leave: #8b2635;
+  --bg: #f7f8fa;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --ok: #10b981;
+  --enter: #16a34a;
+  --enter-2: #15803d;
+  --leave: #ef4444;
+  --leave-2: #dc2626;
+  --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --radius: 18px;
 }
 
 * {
@@ -16,74 +21,104 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at 20% 0%, #ffe9c8 0%, var(--bg) 45%, #e8dcc9 100%);
+  background: var(--bg);
 }
 
 .phone-shell {
-  max-width: 520px;
+  max-width: 420px;
   margin: 0 auto;
-  padding: 1rem 1rem 4rem;
+  padding: 20px 18px 36px;
 }
 
 .eyebrow {
   margin: 0;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  font-weight: 500;
+  font-size: 0.65rem;
 }
 
-h1 {
-  margin: 0.2rem 0 1rem;
+.app-header h1 {
+  margin: 0.2rem 0 0.2rem;
   font-size: 2rem;
+  letter-spacing: -0.02em;
 }
 
-.status {
-  margin: 0 0 1rem;
-  padding: 0.75rem;
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.status-card {
+  margin: 14px 0 18px;
+}
+
+.status-chip {
+  min-width: 100%;
+  min-height: 6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 10px 14px;
   border-radius: 0.8rem;
+  font-weight: 600;
   background: var(--card);
+  box-shadow: var(--shadow);
+  justify-content: center;
+
+}
+
+
+.status-duration {
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
+  font-size: 2.5rem;
 }
 
-.status.open {
-  border: 2px solid color-mix(in oklab, var(--ok), white 40%);
-}
-
-.status.closed {
-  border: 2px solid color-mix(in oklab, var(--muted), white 50%);
+.status-chip.closed {
+  color: var(--muted);
 }
 
 .messages {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 18px;
   display: grid;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 10px;
+  width: min(420px, calc(100% - 32px));
+  margin: 0 auto;
+  z-index: 10;
 }
 
 .message {
-  padding: 0.6rem 0.8rem;
-  border-radius: 0.6rem;
-  font-weight: 700;
+  padding: 0.75rem 0.9rem;
+  border-radius: 14px;
+  font-weight: 600;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  animation: toastFade 4s ease forwards;
 }
 
 .message.success {
-  background: #daf5e8;
   color: #0e5d38;
+  border-left: 4px solid var(--ok);
 }
 
 .message.error {
-  background: #ffd8cc;
   color: #7a200c;
+  border-left: 4px solid var(--leave);
 }
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 form {
@@ -92,40 +127,52 @@ form {
 
 .btn {
   width: 100%;
-  min-height: 88px;
   border: none;
-  border-radius: 1rem;
-  color: #fff;
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  padding: 16px 18px;
+  border-radius: 18px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .btn:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
 }
 
 .btn.enter {
-  background: linear-gradient(150deg, #14a38b, var(--enter));
+  background: linear-gradient(160deg, var(--enter), var(--enter-2));
+  color: #fff;
+  box-shadow: var(--shadow);
 }
 
 .btn.leave {
-  background: linear-gradient(150deg, #c9495e, var(--leave));
+  background: linear-gradient(160deg, var(--leave), var(--leave-2));
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.btn.btn-secondary {
+  background: #eef2f7;
+  color: var(--ink);
+  box-shadow: none;
 }
 
 .week-card {
   background: var(--card);
-  border-radius: 1rem;
-  padding: 0.9rem;
-  margin-bottom: 0.8rem;
-  border: 1px solid #eadfce;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  animation: cardFloat 0.4s ease both;
 }
 
 .week-head {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
-  align-items: baseline;
+  align-items: center;
 }
 
 .week-head h2 {
@@ -133,10 +180,16 @@ form {
   font-size: 1rem;
 }
 
+.week-head p {
+  text-align: right;
+  font-size: 1.5rem;
+}
+
 .total {
   margin: 0;
   color: var(--ok);
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.95rem;
 }
 
 ul {
@@ -148,7 +201,7 @@ ul {
 }
 
 li {
-  border-top: 1px dashed #e1d5c2;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
   padding-top: 0.7rem;
 }
 
@@ -157,7 +210,30 @@ li p {
 }
 
 li p:first-child {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-weight: 600;
+}
+
+.duration {
+  margin-left: auto;
   font-weight: 700;
+  color: var(--ink);
+}
+
+.open-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--ok);
+  border-radius: 0.8rem;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12);
 }
 
 .empty {
@@ -165,12 +241,91 @@ li p:first-child {
   background: var(--card);
   border-radius: 0.8rem;
   color: var(--muted);
+  box-shadow: var(--shadow);
 }
 
-@media (min-width: 768px) {
-  .phone-shell {
-    margin-top: 1rem;
-    border: 2px dashed #d3bea2;
-    border-radius: 1.2rem;
+.leave-modal {
+  width: min(360px, calc(100% - 24px));
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+}
+
+.leave-modal::backdrop {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.leave-modal-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.leave-modal-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.leave-modal-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.leave-modal-card label {
+  font-weight: 600;
+}
+
+.leave-modal-card input {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+}
+
+.leave-duration-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.leave-duration-grid div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.leave-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+@keyframes cardFloat {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastFade {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }

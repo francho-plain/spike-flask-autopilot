@@ -55,7 +55,6 @@ def _week_title(week_start: datetime) -> str:
         return f"Semana {week_start.day}-{week_end.day} {start_month} ({week_start.isocalendar().year})"
     return (
         f"Semana {week_start.day} {start_month} - {week_end.day} {end_month} "
-        f"({week_start.isocalendar().year})"
     )
 
 
@@ -92,12 +91,13 @@ def build_weeks_view(sessions: List[Dict[str, str]], timezone_name: str) -> List
                 "end": end_local.strftime("%H:%M") if session["end_at"] else "En curso",
                 "duration": _format_duration(duration),
                 "is_open": not bool(session["end_at"]),
+                "raw_start": start_local
             }
         )
 
     weeks: List[Dict[str, object]] = []
     for week in sorted(grouped.values(), key=lambda value: value["week_start"], reverse=True):
-        items = sorted(week["items"], key=lambda row: row["start"], reverse=True)
+        items = sorted(week["items"], key=lambda row: row["raw_start"], reverse=False)
         weeks.append(
             {
                 "week_key": week["week_key"],

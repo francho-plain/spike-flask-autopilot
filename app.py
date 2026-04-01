@@ -1,8 +1,8 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Flask, flash, redirect, render_template, url_for
+from flask import Flask, flash, redirect, render_template, request, url_for
 
 from repository.csv_store import CsvSessionStore
 from services.time_tracking import build_weeks_view
@@ -10,6 +10,7 @@ from services.time_tracking import build_weeks_view
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.config["PAGE_TITLE"] = os.getenv("SECRET_KEY", "Time tracking")
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-me")
     app.config["TIMEZONE"] = os.getenv("TZ", "Europe/Madrid")
     app.config["CSV_PATH"] = os.getenv("CSV_PATH", "data/sessions.csv")
@@ -23,6 +24,7 @@ def create_app() -> Flask:
         open_session = store.get_open_session()
         return render_template(
             "index.html",
+            page_title=app.config["PAGE_TITLE"],
             weeks=weeks,
             has_open_session=open_session is not None,
             open_since=(
@@ -32,6 +34,7 @@ def create_app() -> Flask:
                 if open_session
                 else None
             ),
+            open_start_iso=(open_session["start_at"] if open_session else None),
         )
 
     @app.post("/enter")
@@ -48,7 +51,35 @@ def create_app() -> Flask:
     def leave():
         now_utc = datetime.now(timezone.utc).isoformat()
         try:
-            store.end_open_session(now_utc)
+            corrected_hours_raw = request.form.get("corrected_hours", "").strip()
+            corrected_minutes_raw = request.form.get("corrected_minutes", "").strip()
+            if corrected_hours_raw or corrected_minutes_raw:
+                open_session = store.get_open_session()
+                if open_session is None:
+                    raise ValueError("No hay sesión abierta para cerrar")
+
+                try:
+                    corrected_hours = int(corrected_hours_raw or "0")
+                    corrected_minutes = int(corrected_minutes_raw or "0")
+                except ValueError as exc:
+                    raise ValueError("El ajuste de horas o minutos no es válido") from exc
+
+                if corrected_hours < 0 or corrected_minutes < 0 or corrected_minutes > 59:
+                    raise ValueError("El ajuste de horas o minutos no es válido")
+
+                total_seconds = corrected_hours * 3600 + corrected_minutes * 60
+                if total_seconds <= 0:
+                    raise ValueError("El ajuste debe ser mayor que cero")
+
+                start_at = datetime.fromisoformat(open_session["start_at"])
+                corrected_end_at = start_at + timedelta(seconds=total_seconds)
+
+                if corrected_end_at > datetime.now(timezone.utc):
+                    raise ValueError("El ajuste no puede superar la hora actual")
+
+                store.end_open_session(corrected_end_at.isoformat())
+            else:
+                store.end_open_session(now_utc)
             flash("Salida registrada", "success")
         except ValueError as exc:
             flash(str(exc), "error")

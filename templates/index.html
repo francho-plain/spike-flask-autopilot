@@ -9,33 +9,31 @@
   <body>
     <main class="phone-shell">
       <header>
-        <p class="eyebrow">Control horario</p>
-        <h1>Registro laboral</h1>
+        <h1>{{ page_title }}</h1>
       </header>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <section class="messages">
-            {% for category, message in messages %}
-              <article class="message {{ category }}">{{ message }}</article>
-            {% endfor %}
-          </section>
+      <section class="status-card" aria-live="polite">
+        {% if has_open_session %}
+          <p class="status-chip open" data-start-iso="{{ open_start_iso }}">
+            <span class="status-duration" id="session-duration">00:00:00</span>
+          </p>
+        {% else %}
+          <p class="status-chip closed">No hay sesion en curso</p>
         {% endif %}
-      {% endwith %}
-
-      {% if has_open_session %}
-        <p class="status open">Sesion abierta desde {{ open_since }}</p>
-      {% else %}
-        <p class="status closed">No hay sesion en curso</p>
-      {% endif %}
+      </section>
 
       <section class="actions" aria-label="Acciones de fichaje">
-        <form action="{{ url_for('enter') }}" method="post">
-          <button type="submit" class="btn enter" {% if has_open_session %}disabled{% endif %}>Enter</button>
-        </form>
-        <form action="{{ url_for('leave') }}" method="post">
-          <button type="submit" class="btn leave" {% if not has_open_session %}disabled{% endif %}>Leave</button>
-        </form>
+        {% if has_open_session %}
+          <form action="{{ url_for('leave') }}" method="post" id="leave-form">
+            <input type="hidden" name="corrected_hours" id="corrected-hours" value="">
+            <input type="hidden" name="corrected_minutes" id="corrected-minutes" value="">
+            <button type="submit" class="btn leave">Salir</button>
+          </form>
+        {% else %}
+          <form action="{{ url_for('enter') }}" method="post">
+            <button type="submit" class="btn enter">Entrar</button>
+          </form>
+        {% endif %}
       </section>
 
       <section class="weeks" aria-label="Semanas registradas">
@@ -44,13 +42,19 @@
             <article class="week-card">
               <div class="week-head">
                 <h2>{{ week["week_title"] }}</h2>
-                <p class="total">Total {{ week["total"] }}</p>
+                <p class="total">{{ week["total"] }}</p>
               </div>
               <ul>
                 {% for item in week["items"] %}
                   <li>
                     <p>{{ item["day_label"] }}</p>
-                    <p>{{ item["start"] }} - {{ item["end"] }} ({{ item["duration"] }}){% if item["is_open"] %}*{% endif %}</p>
+                    <p class="time-row">
+                      {{ item["start"] }} - {{ item["end"] }}
+                      <span class="duration">{{ item["duration"] }}</span>
+                      {% if item["is_open"] %}
+                        <span class="open-dot" aria-label="Sesion en curso"></span>
+                      {% endif %}
+                    </p>
                   </li>
                 {% endfor %}
               </ul>
@@ -61,5 +65,169 @@
         {% endif %}
       </section>
     </main>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="messages" aria-live="polite" aria-atomic="true">
+          {% for category, message in messages %}
+            <article class="message {{ category }}">{{ message }}</article>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <dialog class="leave-modal" id="leave-modal">
+      <form method="dialog" class="leave-modal-card">
+        <h2>Revisar jornada</h2>
+        <p>
+          Parece que has trabajado mas horas de las estimadas. Revisa y corrigelo si no es correcto.
+        </p>
+        <div class="leave-duration-grid">
+          <div>
+            <label for="hours-input">Horas</label>
+            <input
+              id="hours-input"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              placeholder="8"
+            >
+          </div>
+          <div>
+            <label for="minutes-input">Minutos</label>
+            <input
+              id="minutes-input"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              max="59"
+              step="1"
+              placeholder="30"
+            >
+          </div>
+        </div>
+        <div class="leave-modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancel-leave">Cancelar</button>
+          <button type="button" class="btn leave" id="confirm-leave">Guardar salida</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script>
+      (function () {
+        var chip = document.querySelector(".status-chip.open");
+        if (!chip) {
+          return;
+        }
+        var startIso = chip.getAttribute("data-start-iso");
+        if (!startIso) {
+          return;
+        }
+        var startMs = Date.parse(startIso);
+        if (Number.isNaN(startMs)) {
+          return;
+        }
+
+        var durationNode = document.getElementById("session-duration");
+        if (!durationNode) {
+          return;
+        }
+
+        var formatDuration = function (elapsedMs) {
+          var totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+          var hours = Math.floor(totalSeconds / 3600);
+          var minutes = Math.floor((totalSeconds % 3600) / 60);
+          var seconds = totalSeconds % 60;
+          var pad = function (value) {
+            return String(value).padStart(2, "0");
+          };
+          return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+        };
+
+        var update = function () {
+          durationNode.textContent = formatDuration(Date.now() - startMs);
+        };
+
+        update();
+        window.setInterval(update, 1000);
+      })();
+
+      (function () {
+        var leaveForm = document.getElementById("leave-form");
+        if (!leaveForm) {
+          return;
+        }
+
+        var chip = document.querySelector(".status-chip.open");
+        if (!chip) {
+          return;
+        }
+
+        var startIso = chip.getAttribute("data-start-iso");
+        var startMs = Date.parse(startIso || "");
+        if (Number.isNaN(startMs)) {
+          return;
+        }
+
+        var modal = document.getElementById("leave-modal");
+        var cancelBtn = document.getElementById("cancel-leave");
+        var confirmBtn = document.getElementById("confirm-leave");
+        var hoursInput = document.getElementById("hours-input");
+        var minutesInput = document.getElementById("minutes-input");
+        var correctedHoursInput = document.getElementById("corrected-hours");
+        var correctedMinutesInput = document.getElementById("corrected-minutes");
+
+        if (!modal || !cancelBtn || !confirmBtn || !hoursInput || !minutesInput || !correctedHoursInput || !correctedMinutesInput) {
+          return;
+        }
+
+        var OVERWORK_HOURS = 8;
+
+        leaveForm.addEventListener("submit", function (event) {
+          correctedHoursInput.value = "";
+          correctedMinutesInput.value = "";
+          var elapsedHours = (Date.now() - startMs) / 3600000;
+          if (elapsedHours <= OVERWORK_HOURS) {
+            return;
+          }
+
+          event.preventDefault();
+          var totalMinutes = Math.floor(elapsedHours * 60);
+          var hours = Math.floor(totalMinutes / 60);
+          var minutes = totalMinutes % 60;
+          hoursInput.value = String(hours);
+          minutesInput.value = String(minutes);
+          if (typeof modal.showModal === "function") {
+            modal.showModal();
+          }
+        });
+
+        cancelBtn.addEventListener("click", function () {
+          modal.close();
+        });
+
+        confirmBtn.addEventListener("click", function () {
+          var hours = parseInt(hoursInput.value || "0", 10);
+          var minutes = parseInt(minutesInput.value || "0", 10);
+          if (!Number.isInteger(hours) || hours < 0) {
+            hoursInput.focus();
+            return;
+          }
+          if (!Number.isInteger(minutes) || minutes < 0 || minutes > 59) {
+            minutesInput.focus();
+            return;
+          }
+          if (hours === 0 && minutes === 0) {
+            hoursInput.focus();
+            return;
+          }
+          correctedHoursInput.value = String(hours);
+          correctedMinutesInput.value = String(minutes);
+          modal.close();
+          leaveForm.submit();
+        });
+      })();
+    </script>
   </body>
 </html>
