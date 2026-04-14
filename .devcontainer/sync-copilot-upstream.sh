@@ -8,9 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 CLONE_DIR="$HOME/.copilot-upstream/francho-copilot"
-GITHUB_ROOT="$CLONE_DIR/.github"
-PROJECT_GITHUB_ROOT="$REPO_ROOT/.github"
-LEGACY_TARGET_ROOT="$REPO_ROOT/.copilot/upstream/francho-copilot"
+COPILOT_DIR="$HOME/.copilot"
 PREFIX="common-"
 
 # Clone once; pull on subsequent container rebuilds
@@ -30,22 +28,26 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$GITHUB_ROOT"
-
+# Sync each component from the upstream clone directly into ~/.copilot/.
+# instructions go under .github/instructions/ so COPILOT_CUSTOM_INSTRUCTIONS_DIRS=~/.copilot
+# lets the Copilot CLI discover them as .github/instructions/**/*.instructions.md.
 components=(agents skills instructions prompts)
 
 for component in "${components[@]}"; do
   src="$CLONE_DIR/$component"
-  dest="$GITHUB_ROOT/$component"
   stage="$TMP_DIR/stage/$component"
-  project_dest="$PROJECT_GITHUB_ROOT/$component"
+
+  case "$component" in
+    instructions) dest="$COPILOT_DIR/.github/instructions" ;;
+    *)            dest="$COPILOT_DIR/$component" ;;
+  esac
 
   mkdir -p "$dest"
   rm -rf "$stage"
   mkdir -p "$stage"
 
   if [[ -d "$src" ]]; then
-    echo "[copilot-sync] Mirroring $component/"
+    echo "[copilot-sync] Mirroring $component/ -> $dest"
 
     if [[ "$component" == "skills" ]]; then
       shopt -s nullglob
@@ -76,18 +78,28 @@ for component in "${components[@]}"; do
 
   find "$dest" -maxdepth 1 -mindepth 1 -name "${PREFIX}*" -exec rm -rf {} +
   rsync -a "$stage/" "$dest/"
+done
 
-  # Remove any common-* files that were previously synced into the project .github/
+# --- Legacy cleanup ---
+
+# Remove common-* files previously synced into the project .github/
+for component in agents skills instructions prompts; do
+  project_dest="$REPO_ROOT/.github/$component"
   if [[ -d "$project_dest" ]]; then
     find "$project_dest" -maxdepth 1 -mindepth 1 -name "${PREFIX}*" -exec rm -rf {} +
   fi
 done
 
-if [[ -e "$LEGACY_TARGET_ROOT" ]]; then
-  echo "[copilot-sync] Removing legacy unmanaged mirror: $LEGACY_TARGET_ROOT"
-  rm -rf "$LEGACY_TARGET_ROOT"
+# Remove the old intermediate sync target (~/.copilot-upstream/…/.github/)
+if [[ -d "$CLONE_DIR/.github" ]]; then
+  echo "[copilot-sync] Removing legacy intermediate target: $CLONE_DIR/.github"
+  rm -rf "$CLONE_DIR/.github"
 fi
 
-echo "[copilot-sync] Done. Published assets under: $GITHUB_ROOT"
-echo "[copilot-sync] Copilot discovers them via the extra workspace folder: $CLONE_DIR"
+if [[ -e "$REPO_ROOT/.copilot/upstream/francho-copilot" ]]; then
+  echo "[copilot-sync] Removing legacy unmanaged mirror: $REPO_ROOT/.copilot/upstream/francho-copilot"
+  rm -rf "$REPO_ROOT/.copilot/upstream/francho-copilot"
+fi
+
+echo "[copilot-sync] Done. Upstream assets synced to: $COPILOT_DIR"
 echo "[copilot-sync] Managed assets use prefix: ${PREFIX}"
