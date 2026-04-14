@@ -7,9 +7,22 @@ UPSTREAM_REF="${COPILOT_UPSTREAM_REF:-main}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-GITHUB_ROOT="$REPO_ROOT/.github"
+CLONE_DIR="$HOME/.copilot-upstream/francho-copilot"
+GITHUB_ROOT="$CLONE_DIR/.github"
+PROJECT_GITHUB_ROOT="$REPO_ROOT/.github"
 LEGACY_TARGET_ROOT="$REPO_ROOT/.copilot/upstream/francho-copilot"
 PREFIX="common-"
+
+# Clone once; pull on subsequent container rebuilds
+if [[ -d "$CLONE_DIR/.git" ]]; then
+  echo "[copilot-sync] Pulling upstream: $UPSTREAM_URL ($UPSTREAM_REF)"
+  git -C "$CLONE_DIR" fetch --depth 1 origin "$UPSTREAM_REF"
+  git -C "$CLONE_DIR" reset --hard FETCH_HEAD
+else
+  echo "[copilot-sync] Cloning upstream: $UPSTREAM_URL ($UPSTREAM_REF)"
+  mkdir -p "$(dirname "$CLONE_DIR")"
+  git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_URL" "$CLONE_DIR"
+fi
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -17,17 +30,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[copilot-sync] Cloning upstream: $UPSTREAM_URL ($UPSTREAM_REF)"
-git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_URL" "$TMP_DIR/src"
-
 mkdir -p "$GITHUB_ROOT"
 
 components=(agents skills instructions prompts)
 
 for component in "${components[@]}"; do
-  src="$TMP_DIR/src/$component"
+  src="$CLONE_DIR/$component"
   dest="$GITHUB_ROOT/$component"
   stage="$TMP_DIR/stage/$component"
+  project_dest="$PROJECT_GITHUB_ROOT/$component"
 
   mkdir -p "$dest"
   rm -rf "$stage"
@@ -48,12 +59,6 @@ for component in "${components[@]}"; do
         if [[ -f "$skill_file" ]]; then
           sed -i "s/^name:[[:space:]]*\"\{0,1\}${skill_name}\"\{0,1\}[[:space:]]*$/name: ${PREFIX}${skill_name}/" "$skill_file"
         fi
-
-        legacy_skill_dir="$dest/$skill_name"
-        if [[ -d "$legacy_skill_dir" ]] && diff -qr "$skill_dir" "$legacy_skill_dir" >/dev/null 2>&1; then
-          echo "[copilot-sync] Removing legacy unprefixed skill: $skill_name"
-          rm -rf "$legacy_skill_dir"
-        fi
       done
       shopt -u nullglob
     else
@@ -62,12 +67,6 @@ for component in "${components[@]}"; do
         [[ -f "$file_path" ]] || continue
         file_name="$(basename "$file_path")"
         cp "$file_path" "$stage/${PREFIX}${file_name}"
-
-        legacy_file="$dest/$file_name"
-        if [[ -f "$legacy_file" ]] && cmp -s "$file_path" "$legacy_file"; then
-          echo "[copilot-sync] Removing legacy unprefixed file: $component/$file_name"
-          rm -f "$legacy_file"
-        fi
       done
       shopt -u nullglob
     fi
@@ -77,6 +76,11 @@ for component in "${components[@]}"; do
 
   find "$dest" -maxdepth 1 -mindepth 1 -name "${PREFIX}*" -exec rm -rf {} +
   rsync -a "$stage/" "$dest/"
+
+  # Remove any common-* files that were previously synced into the project .github/
+  if [[ -d "$project_dest" ]]; then
+    find "$project_dest" -maxdepth 1 -mindepth 1 -name "${PREFIX}*" -exec rm -rf {} +
+  fi
 done
 
 if [[ -e "$LEGACY_TARGET_ROOT" ]]; then
@@ -85,5 +89,5 @@ if [[ -e "$LEGACY_TARGET_ROOT" ]]; then
 fi
 
 echo "[copilot-sync] Done. Published assets under: $GITHUB_ROOT"
-echo "[copilot-sync] Copilot discovers them from .github/{agents,instructions,prompts,skills}"
+echo "[copilot-sync] Copilot discovers them via the extra workspace folder: $CLONE_DIR"
 echo "[copilot-sync] Managed assets use prefix: ${PREFIX}"
