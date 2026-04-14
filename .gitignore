@@ -3,3 +3,7 @@ __pycache__/
 .env
 .venv/
 data/sessions.csv
+.github/agents/common-*
+.github/instructions/common-*
+.github/prompts/common-*
+.github/skills/common-*/
