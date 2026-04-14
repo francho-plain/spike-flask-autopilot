@@ -20,15 +20,14 @@
 	// This can be used to network with other containers or the host.
 	// "forwardPorts": [5000, 5432],
 
+	// Tell Copilot CLI where to find upstream instructions (AGENTS.md and .github/instructions/**).
+	// Skills and agents are synced directly to ~/.copilot/{skills,agents} by sync-copilot-upstream.sh.
+	"remoteEnv": {
+		"COPILOT_CUSTOM_INSTRUCTIONS_DIRS": "/home/vscode/.copilot"
+	},
+
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/sync-copilot-upstream.sh && pip install --user -r requirements.txt && (curl -fsSL https://gh.io/copilot-install | bash || true)",
-
-	// Open as a multi-root workspace so VS Code Copilot discovers agents/skills/instructions/prompts
-	// from ~/.copilot-upstream/francho-copilot/.github/ (populated by sync-copilot-upstream.sh).
-	// Note: 'workspaceFile' is a VS Code-specific devcontainer property — the JSON schema validator
-	// may flag it as unknown because it's not in the official containers.dev spec, but it IS
-	// fully supported by the VS Code Dev Containers extension.
-	"workspaceFile": ".devcontainer/spike-flask.code-workspace",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -36,17 +35,27 @@
 			"extensions": [
 				"GitHub.copilot",
 				"GitHub.copilot-chat",
-        "ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools"
 			],
 			"settings": {
 				"workbench.colorTheme": "Solarized Light",
-				// Tell VS Code Copilot where to find custom instruction and prompt files
-				// synced from the upstream repo into ~/.copilot-upstream/francho-copilot/.github/
+				// All upstream assets are synced to ~/.copilot/ by sync-copilot-upstream.sh.
+				// These settings let VS Code Copilot discover them alongside project-local ones.
 				"chat.instructionsFilesLocations": {
-					"/home/vscode/.copilot-upstream/francho-copilot/.github/instructions": true
+					"~/.copilot/.github/instructions": true,
+					".github/instructions": true
+				},
+				"chat.agentSkillsLocations": {
+					"~/.copilot/skills": true,
+					".github/skills": true
+				},
+				"chat.agentFilesLocations": {
+					"~/.copilot/agents": true,
+					".github/agents": true
 				},
 				"chat.promptFilesLocations": {
-					"/home/vscode/.copilot-upstream/francho-copilot/.github/prompts": true
+					"~/.copilot/prompts": true,
+					".github/prompts": true
 				}
 			}
 		}
