@@ -23,6 +23,13 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/sync-copilot-upstream.sh && pip install --user -r requirements.txt && (curl -fsSL https://gh.io/copilot-install | bash || true)",
 
+	// Open as a multi-root workspace so VS Code Copilot discovers agents/skills/instructions/prompts
+	// from ~/.copilot-upstream/francho-copilot/.github/ (populated by sync-copilot-upstream.sh).
+	// Note: 'workspaceFile' is a VS Code-specific devcontainer property — the JSON schema validator
+	// may flag it as unknown because it's not in the official containers.dev spec, but it IS
+	// fully supported by the VS Code Dev Containers extension.
+	"workspaceFile": ".devcontainer/spike-flask.code-workspace",
+
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
@@ -32,7 +39,15 @@
         "ms-vscode.makefile-tools"
 			],
 			"settings": {
-				"workbench.colorTheme": "Solarized Light"
+				"workbench.colorTheme": "Solarized Light",
+				// Tell VS Code Copilot where to find custom instruction and prompt files
+				// synced from the upstream repo into ~/.copilot-upstream/francho-copilot/.github/
+				"chat.instructionsFilesLocations": {
+					"/home/vscode/.copilot-upstream/francho-copilot/.github/instructions": true
+				},
+				"chat.promptFilesLocations": {
+					"/home/vscode/.copilot-upstream/francho-copilot/.github/prompts": true
+				}
 			}
 		}
 	}
