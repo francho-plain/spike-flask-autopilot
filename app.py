@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from repository.csv_store import CsvSessionStore
-from services.time_tracking import build_weeks_view
+from services.time_tracking import DAILY_TARGET, WEEKLY_TARGET, build_weeks_view
 
 
 def create_app() -> Flask:
@@ -35,6 +35,8 @@ def create_app() -> Flask:
                 else None
             ),
             open_start_iso=(open_session["start_at"] if open_session else None),
+            weekly_target_s=int(WEEKLY_TARGET.total_seconds()),
+            daily_target_s=int(DAILY_TARGET.total_seconds()),
         )
 
     @app.post("/enter")

@@ -42,24 +42,24 @@
             <article class="week-card">
               <div class="week-head">
                 <p>{{ week["week_title"] }}</p>
-                <p class="week-total {% if week['week_ok'] %}goal-ok{% else %}goal-under{% endif %}">{{ week["total"] }}</p>
+                <p class="week-total {% if week['week_ok'] %}goal-ok{% else %}goal-under{% endif %}"
+                  {% if week['has_open'] %}data-closed-s="{{ week['closed_seconds'] }}" data-ok-threshold="{{ weekly_target_s }}"{% endif %}>{{ week["total"] }}</p>
               </div>
               {% for day in week["days"] %}
                 <div class="day-group">
                   <div class="day-head">
                     <p class="day-label">{{ day["day_label"] }}</p>
-                    <p class="day-total {% if day['day_ok'] %}goal-ok{% else %}goal-under{% endif %}">{{ day["total"] }}</p>
+                    <p class="day-total {% if day['day_ok'] %}goal-ok{% else %}goal-under{% endif %}"
+                      {% if day['has_open'] %}data-closed-s="{{ day['closed_seconds'] }}" data-ok-threshold="{{ daily_target_s }}"{% endif %}>{{ day["total"] }}</p>
                   </div>
                   <ul>
                     {% for item in day["items"] %}
                       <li class="time-row">
-                        <span class="hours">{{ item["start"] }} - {{ item["end"] }}</span>
+                        <span class="hours">{{ item["start"] }} - {% if item["is_open"] %}<span class="live-end">{{ item["end"] }}</span>{% else %}{{ item["end"] }}{% endif %}</span>
                         {% if item["is_open"] %}
                           <span class="open-dot" aria-label="Sesion en curso"></span>
                         {% endif %}
-                        <span class="duration">
-                          {{ item["duration"] }}
-                        </span>
+                        <span class="duration{% if item['is_open'] %} live-duration{% endif %}">{{ item["duration"] }}</span>
                       </li>
                     {% endfor %}
                   </ul>
@@ -234,6 +234,58 @@
           modal.close();
           leaveForm.submit();
         });
+      })();
+
+      (function () {
+        var liveTotals = document.querySelectorAll("[data-closed-s]");
+        if (!liveTotals.length) { return; }
+
+        var chip = document.querySelector(".status-chip.open");
+        if (!chip) { return; }
+        var startMs = Date.parse(chip.getAttribute("data-start-iso") || "");
+        if (Number.isNaN(startMs)) { return; }
+
+        var lastMinute = -1;
+
+        function formatDuration(totalSeconds) {
+          totalSeconds = Math.max(0, Math.floor(totalSeconds));
+          var h = Math.floor(totalSeconds / 3600);
+          var m = Math.floor((totalSeconds % 3600) / 60);
+          return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + "h";
+        }
+
+        function formatTime(ms) {
+          var d = new Date(ms);
+          return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+        }
+
+        function tick() {
+          var now = Date.now();
+          var currentMinute = Math.floor(now / 60000);
+          if (currentMinute === lastMinute) { return; }
+          lastMinute = currentMinute;
+
+          var elapsedSeconds = (now - startMs) / 1000;
+
+          liveTotals.forEach(function (el) {
+            var closedS = parseInt(el.getAttribute("data-closed-s"), 10);
+            var threshold = parseInt(el.getAttribute("data-ok-threshold"), 10);
+            var currentS = closedS + elapsedSeconds;
+            el.textContent = formatDuration(currentS);
+            var isOk = currentS >= threshold;
+            el.classList.toggle("goal-ok", isOk);
+            el.classList.toggle("goal-under", !isOk);
+          });
+
+          var liveEnd = document.querySelector(".live-end");
+          if (liveEnd) { liveEnd.textContent = formatTime(now); }
+
+          var liveDuration = document.querySelector(".live-duration");
+          if (liveDuration) { liveDuration.textContent = formatDuration(elapsedSeconds); }
+        }
+
+        tick();
+        window.setInterval(tick, 1000);
       })();
     </script>
   </body>

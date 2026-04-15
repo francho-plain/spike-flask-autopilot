@@ -112,17 +112,32 @@ def build_weeks_view(sessions: List[Dict[str, str]], timezone_name: str) -> List
     for week in sorted(grouped.values(), key=lambda value: value["week_start"], reverse=True):
         week_total: timedelta = week["total"]
         days = sorted(week["days"].values(), key=lambda d: d["day_date"], reverse=False)
+        week_has_open = False
+        week_open_duration: timedelta = timedelta()
         for day in days:
             day_total: timedelta = day["total"]
+            day_has_open = any(item["is_open"] for item in day["items"])
+            day_open_duration = timedelta()
+            if day_has_open:
+                week_has_open = True
+                open_item = next(item for item in day["items"] if item["is_open"])
+                day_open_duration = now_local - open_item["raw_start"]
+                week_open_duration = day_open_duration
+            day_closed_s = int((day_total - day_open_duration).total_seconds())
             day["total"] = _format_duration(day_total)
+            day["closed_seconds"] = day_closed_s
             day["day_ok"] = day_total >= DAILY_TARGET
+            day["has_open"] = day_has_open
             day["items"] = sorted(day["items"], key=lambda row: row["raw_start"])
+        week_closed_s = int((week_total - week_open_duration).total_seconds())
         weeks.append(
             {
                 "week_key": week["week_key"],
                 "week_title": week["week_title"],
                 "total": _format_duration(week_total),
+                "closed_seconds": week_closed_s,
                 "week_ok": week_total >= WEEKLY_TARGET,
+                "has_open": week_has_open,
                 "days": days,
             }
         )
