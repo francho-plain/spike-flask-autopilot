@@ -41,23 +41,30 @@
           {% for week in weeks %}
             <article class="week-card">
               <div class="week-head">
-                <h2>{{ week["week_title"] }}</h2>
-                <p class="total">{{ week["total"] }}</p>
+                <p>{{ week["week_title"] }}</p>
+                <p class="week-total {% if week['week_ok'] %}goal-ok{% else %}goal-under{% endif %}">{{ week["total"] }}</p>
               </div>
-              <ul>
-                {% for item in week["items"] %}
-                  <li>
-                    <p>{{ item["day_label"] }}</p>
-                    <p class="time-row">
-                      {{ item["start"] }} - {{ item["end"] }}
-                      <span class="duration">{{ item["duration"] }}</span>
-                      {% if item["is_open"] %}
-                        <span class="open-dot" aria-label="Sesion en curso"></span>
-                      {% endif %}
-                    </p>
-                  </li>
-                {% endfor %}
-              </ul>
+              {% for day in week["days"] %}
+                <div class="day-group">
+                  <div class="day-head">
+                    <p class="day-label">{{ day["day_label"] }}</p>
+                    <p class="day-total {% if day['day_ok'] %}goal-ok{% else %}goal-under{% endif %}">{{ day["total"] }}</p>
+                  </div>
+                  <ul>
+                    {% for item in day["items"] %}
+                      <li class="time-row">
+                        <span class="hours">{{ item["start"] }} - {{ item["end"] }}</span>
+                        {% if item["is_open"] %}
+                          <span class="open-dot" aria-label="Sesion en curso"></span>
+                        {% endif %}
+                        <span class="duration">
+                          {{ item["duration"] }}
+                        </span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endfor %}
             </article>
           {% endfor %}
         {% else %}
