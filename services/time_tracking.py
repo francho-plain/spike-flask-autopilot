@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 from zoneinfo import ZoneInfo
 
+DAILY_TARGET = timedelta(hours=7)
+WEEKLY_TARGET = DAILY_TARGET * 5
+
 SPANISH_WEEKDAYS = [
     "lunes",
     "martes",
@@ -73,6 +76,7 @@ def build_weeks_view(sessions: List[Dict[str, str]], timezone_name: str) -> List
             hour=0, minute=0, second=0, microsecond=0
         )
         week_key = f"{week_start.isocalendar().year}-W{week_start.isocalendar().week:02d}"
+        day_key = start_local.strftime("%Y-%m-%d")
 
         if week_key not in grouped:
             grouped[week_key] = {
@@ -80,30 +84,46 @@ def build_weeks_view(sessions: List[Dict[str, str]], timezone_name: str) -> List
                 "week_start": week_start,
                 "week_title": _week_title(week_start),
                 "total": timedelta(),
+                "days": {},
+            }
+
+        days = grouped[week_key]["days"]
+        if day_key not in days:
+            days[day_key] = {
+                "day_label": _day_label(start_local),
+                "day_date": start_local.replace(hour=0, minute=0, second=0, microsecond=0),
+                "total": timedelta(),
                 "items": [],
             }
 
         grouped[week_key]["total"] += duration
-        grouped[week_key]["items"].append(
+        days[day_key]["total"] += duration
+        days[day_key]["items"].append(
             {
-                "day_label": _day_label(start_local),
                 "start": start_local.strftime("%H:%M"),
                 "end": end_local.strftime("%H:%M") if session["end_at"] else "En curso",
                 "duration": _format_duration(duration),
                 "is_open": not bool(session["end_at"]),
-                "raw_start": start_local
+                "raw_start": start_local,
             }
         )
 
     weeks: List[Dict[str, object]] = []
     for week in sorted(grouped.values(), key=lambda value: value["week_start"], reverse=True):
-        items = sorted(week["items"], key=lambda row: row["raw_start"], reverse=False)
+        week_total: timedelta = week["total"]
+        days = sorted(week["days"].values(), key=lambda d: d["day_date"], reverse=False)
+        for day in days:
+            day_total: timedelta = day["total"]
+            day["total"] = _format_duration(day_total)
+            day["day_ok"] = day_total >= DAILY_TARGET
+            day["items"] = sorted(day["items"], key=lambda row: row["raw_start"])
         weeks.append(
             {
                 "week_key": week["week_key"],
                 "week_title": week["week_title"],
-                "total": _format_duration(week["total"]),
-                "items": items,
+                "total": _format_duration(week_total),
+                "week_ok": week_total >= WEEKLY_TARGET,
+                "days": days,
             }
         )
 
